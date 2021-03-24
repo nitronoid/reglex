@@ -1,0 +1,53 @@
+/* This /*
+is a multi-line "comment" 3.0 nil true
+****** */
+
+// Ternary test
+var b = 1 > 0;
+var x = b ? 5 : 6;
+var y = 3 * ( 4 +  -3.25 / 2) + ("hello" + "world"); // Complex expression
+var z = -9.0 * 2 /* With comment inside */+ "Whoa /* string matched correctly */";
+print x + y + z;
+// Redefinition
+var b = true;
+print b == !!true == !false;
+print b = "hi";
+
+// Multi assignment
+x = y = 2;
+print x;
+print y;
+
+{
+  var c = "hey";
+  print c;
+  print b;
+  // Should print bye using our shadowed var
+  var b = "bye";
+  print b;
+
+  // Assign to the enclosing scope
+  {
+    x = 10;
+  }
+}
+
+// Should print 'hi' as the shadowing variable has been popped
+print b;
+// Should print 10
+print x;
+
+
+var block = {
+  // Do some work
+  var x = 1;
+  var y = 3;
+  // Evaluate an expression as part of the block to be assigned
+  x + y
+};
+
+// Should print 4
+print block;
+
+// Should work
+{}
