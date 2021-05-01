@@ -2,6 +2,10 @@
 #if !defined(REGLEX_H)
 #define REGLEX_H
 
+#if !defined(REGLEX_NAMESPACE)
+#define REGLEX_NAMESPACE reglex
+#endif
+
 #include <array>
 #include <functional>
 #include <optional>
@@ -12,8 +16,17 @@
 #include <magic_enum.hpp>
 #include <ctre/ctre.hpp>
 
-namespace reglex
+namespace REGLEX_NAMESPACE
 {
+template <typename TokenT>
+struct Matcher
+{
+    template <TokenT>
+    static constexpr std::string_view pattern = "";
+    template <TokenT>
+    static constexpr bool filter_out = false;
+};
+
 template <typename TokenType>
 struct Token
 {
@@ -31,10 +44,9 @@ struct LexTraits
     using token_t = Token<token_type_t>;
     using matcher_t = Matcher;
 
-    static constexpr auto token_values = magic_enum::enum_values<token_type_t>();
-    static constexpr std::size_t token_count = token_values.size();
     template <std::size_t J>
-    static constexpr token_type_t lookup = token_values[J];
+    static constexpr token_type_t lookup = magic_enum::enum_value<token_type_t>(J);
+    static constexpr std::size_t token_count = magic_enum::enum_count<token_type_t>();
 };
 
 namespace detail
@@ -98,12 +110,27 @@ constexpr void for_n(F&& f)
 }
 } // namespace detail
 
+enum class Status
+{
+    NoMatch = 0,
+    FilteredMatch = 1,
+    UnfilteredMatch = 2
+};
+
+template <typename TokenT>
+struct LexResult
+{
+    TokenT token{};
+    Status status = Status::NoMatch;
+};
+
 template <typename Traits>
-constexpr std::optional<typename Traits::token_t> lex_token(std::string_view src, std::size_t line = 0)
+constexpr auto lex_token(std::string_view src, std::size_t line = 0)
 {
     using token_t = typename Traits::token_t;
+    using matcher_t = typename Traits::matcher_t;
     // Default to an EOF
-    std::optional<token_t> token;
+    LexResult<token_t> result;
     // Attempt to match our grammar, produces a tuple of match results
     auto const matches = ctre::search<detail::pattern<Traits>>(src);
     // Function to check for matches in the result tuple
@@ -114,6 +141,7 @@ constexpr std::optional<typename Traits::token_t> lex_token(std::string_view src
         // Build a new token from this match groups token type
         // Guard with the multiply to ensure that we don't use a negative index
         constexpr auto type = Traits::template lookup<(i.value - 1) * !!i.value>;
+        constexpr Status status = matcher_t::template filter_out<type> ? Status::FilteredMatch : Status::UnfilteredMatch;
         // Get a view to the substring which matched this tokens pattern
         auto const lexeme = group.view();
         // Calculate the line that the lexeme began on
@@ -122,11 +150,12 @@ constexpr std::optional<typename Traits::token_t> lex_token(std::string_view src
         // Calculate how many lines this lexeme spans
         auto const num_lines = static_cast<std::size_t>(std::count(lexeme.begin(), lexeme.end(), '\n'));
         // Set the result token
-        token = token_t{type, lexeme, first_line, num_lines};
+        result.token = token_t{type, lexeme, first_line, num_lines};
+        result.status = status;
     };
     // Apply our matcher to each match group, with its group index
     detail::for_n<Traits::token_count>(extract_match);
-    return token;
+    return result;
 }
 
 template <typename T>
@@ -143,25 +172,45 @@ Lexed<typename Traits::token_t> lex(std::string_view source)
     Lexed<typename Traits::token_t> res;
     // Keep track of the line we're processing
     std::size_t line = 0;
-    // Consume until we're out of input characters
-    while (!source.empty())
-    {
-        // Try to lex the next token
-        if (auto lexed = lex_token<Traits>(source, line))
+    [&]{
+        // Consume until we're out of input characters
+        while (!source.empty())
         {
-            // Advance past the source for this lexeme
-            source = source.substr(static_cast<std::size_t>(&lexed->lexeme.back() + 1 - source.data()));
-            // Update the line number
-            line = lexed->first_line + lexed->num_lines;
-            // Add the token to our stream
-            res.tokens.emplace_back(std::move(*lexed));
+            // Try to lex the next token
+            auto lexed = lex_token<Traits>(source, line);
+            switch (lexed.status)
+            {
+            case Status::NoMatch: return;
+            case Status::FilteredMatch:
+            case Status::UnfilteredMatch:
+            {
+                // Advance past the source for this lexeme
+                source = source.substr(static_cast<std::size_t>(&lexed.token.lexeme.back() + 1 - source.data()));
+                // Update the line number
+                line = lexed.token.first_line + lexed.token.num_lines;
+                // Add the token to our stream
+                if (lexed.status == Status::UnfilteredMatch)
+                    res.tokens.emplace_back(std::move(lexed.token));
+                break;
+            }
+            }
         }
-        else
-            break;
-    }
+    }();
     res.remainder = source;
     return res;
 }
-} // namespace reglex
+
+/// Useful regex constants
+static constexpr std::string_view identifier = R"([a-zA-Z_]\w*)";
+static constexpr std::string_view cstyle_comment = R"((?://[^\n]*)|(?:/\*[^*]*\*+(?:[^/*][^*]*\*+)*/))";
+static constexpr std::string_view string = R"("[^"]*")";
+static constexpr std::string_view real_number = R"([0-9]+(?:\.[0-9]+)?)";
+static constexpr std::string_view integer = R"([1-9][0-9]*)";
+static constexpr std::string_view non_whitespace = R"([^\s]+)";
+} // namespace REGLEX_NAMESPACE
+
+#if defined(REGLEX_USE_MACROS)
+#define REGLEX_KEYWORD(word) word R"((?=\W|$))"
+#endif
 
 #endif // REGLEX_H

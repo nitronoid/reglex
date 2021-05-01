@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#define REGLEX_USE_MACROS
 #include <reglex/reglex.hpp>
 
 // clang-format off
@@ -22,13 +23,11 @@ enum class TokenType : uint8_t
 };
 // clang-format on
 
-struct Matcher
+struct Matcher : reglex::Matcher<TokenType>
 {
-    template <TokenType>
-    static constexpr std::string_view pattern = "";
 };
 // clang-format off
-template<> constexpr std::string_view Matcher::pattern<TokenType::COMMENT> = R"((?://[^\n]*)|(?:/\*[^*]*\*+(?:[^/*][^*]*\*+)*/))";
+template<> constexpr std::string_view Matcher::pattern<TokenType::COMMENT> = reglex::cstyle_comment;
 template<> constexpr std::string_view Matcher::pattern<TokenType::LEFT_PAREN> = R"(\()";
 template<> constexpr std::string_view Matcher::pattern<TokenType::RIGHT_PAREN> = R"(\))";
 template<> constexpr std::string_view Matcher::pattern<TokenType::LEFT_BRACE> = R"(\{)";
@@ -52,26 +51,28 @@ template<> constexpr std::string_view Matcher::pattern<TokenType::LESS_EQUAL> = 
 template<> constexpr std::string_view Matcher::pattern<TokenType::GREATER> = R"(>)";
 template<> constexpr std::string_view Matcher::pattern<TokenType::LESS> = R"(<)";
 template<> constexpr std::string_view Matcher::pattern<TokenType::ASSIGN> = R"(=)";
-template<> constexpr std::string_view Matcher::pattern<TokenType::AND> = R"(and(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::STRUCT> = R"(struct(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::ELSE> = R"(else(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::FUN> = R"(fun(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::FOR> = R"(for(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::IF> = R"(if(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::NIL> = R"(nil(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::OR> = R"(or(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::PRINT> = R"(print(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::RETURN> = R"(return(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::SUPER> = R"(super(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::THIS> = R"(this(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::TRUE> = R"(true(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::FALSE> = R"(false(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::VAR> = R"(var(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::WHILE> = R"(while(?=\W|$))";
-template<> constexpr std::string_view Matcher::pattern<TokenType::IDENTIFIER> = R"([a-zA-Z_]+\w*)";
-template<> constexpr std::string_view Matcher::pattern<TokenType::STRING> = R"("[^"]*")";
-template<> constexpr std::string_view Matcher::pattern<TokenType::NUMBER> = R"([0-9]+(?:\.[0-9]+)?)";
-template<> constexpr std::string_view Matcher::pattern<TokenType::ERROR> = R"([^\s]+)";
+template<> constexpr std::string_view Matcher::pattern<TokenType::AND> = REGLEX_KEYWORD("and");
+template<> constexpr std::string_view Matcher::pattern<TokenType::STRUCT> = REGLEX_KEYWORD("struct");
+template<> constexpr std::string_view Matcher::pattern<TokenType::ELSE> = REGLEX_KEYWORD("else");
+template<> constexpr std::string_view Matcher::pattern<TokenType::FUN> = REGLEX_KEYWORD("fun");
+template<> constexpr std::string_view Matcher::pattern<TokenType::FOR> = REGLEX_KEYWORD("for");
+template<> constexpr std::string_view Matcher::pattern<TokenType::IF> = REGLEX_KEYWORD("if");
+template<> constexpr std::string_view Matcher::pattern<TokenType::NIL> = REGLEX_KEYWORD("nil");
+template<> constexpr std::string_view Matcher::pattern<TokenType::OR> = REGLEX_KEYWORD("or");
+template<> constexpr std::string_view Matcher::pattern<TokenType::PRINT> = REGLEX_KEYWORD("print");
+template<> constexpr std::string_view Matcher::pattern<TokenType::RETURN> = REGLEX_KEYWORD("return");
+template<> constexpr std::string_view Matcher::pattern<TokenType::SUPER> = REGLEX_KEYWORD("super");
+template<> constexpr std::string_view Matcher::pattern<TokenType::THIS> = REGLEX_KEYWORD("this");
+template<> constexpr std::string_view Matcher::pattern<TokenType::TRUE> = REGLEX_KEYWORD("true");
+template<> constexpr std::string_view Matcher::pattern<TokenType::FALSE> = REGLEX_KEYWORD("false");
+template<> constexpr std::string_view Matcher::pattern<TokenType::VAR> = REGLEX_KEYWORD("var");
+template<> constexpr std::string_view Matcher::pattern<TokenType::WHILE> = REGLEX_KEYWORD("while");
+template<> constexpr std::string_view Matcher::pattern<TokenType::IDENTIFIER> = reglex::identifier;
+template<> constexpr std::string_view Matcher::pattern<TokenType::STRING> = reglex::string;
+template<> constexpr std::string_view Matcher::pattern<TokenType::NUMBER> = reglex::real_number;
+template<> constexpr std::string_view Matcher::pattern<TokenType::ERROR> = reglex::non_whitespace;
+
+template<> constexpr bool Matcher::filter_out<TokenType::COMMENT> = true;
 // clang-format on
 
 // Define the traits for the token
