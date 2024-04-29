@@ -1,19 +1,9 @@
-load("@bazel_compilation_db//:aspects.bzl", "compilation_database")
-compilation_database(
-    name = "compilation_commands.json",
-    targets = [
-        "//:reglex",
-    ],
-    # ideally should be the same as `bazel info execution_root`.
-    exec_root = "/home/nitronoid/dev/git/nitronoid/reglex",
-)
-
 cc_library(
     name = "reglex-private",
     hdrs = glob(["include/**/*.hpp"]),
     srcs = glob(["src/**/*.cpp"]),
     deps = [
-        "@magic-enum//:magic-enum",
+        "@magic_enum",
     ],
     strip_include_prefix = "include",
     copts = ["-Wno-type-limits"],

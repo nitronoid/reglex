@@ -2,3 +2,4 @@ build
 bazel-out
 bazel-build
 compile_commands.json
+MODULE.bazel.lock

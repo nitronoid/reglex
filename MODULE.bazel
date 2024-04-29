@@ -1,0 +1,13 @@
+bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
+git_override(
+    module_name = "hedron_compile_commands",
+    remote = "https://github.com/hedronvision/bazel-compile-commands-extractor.git",
+    commit = "a14ad3a64e7bf398ab48105aaa0348e032ac87f8",
+)
+
+bazel_dep(name = "magic_enum", version = "0.9.5", dev_dependency = True)
+git_override(
+    module_name = "magic_enum",
+    remote = "https://github.com/Neargye/magic_enum.git",
+    commit = "e55b9b54d5cf61f8e117cafb17846d7d742dd3b4",
+)
